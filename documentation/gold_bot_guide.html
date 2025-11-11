@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>راهنمای کامل ربات معاملاتی طلا (XAUUSD)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.8;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 50px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin: 30px 0 15px 0;
+        }
+        
+        .info-box {
+            background-color: #e7f3ff;
+            border-right: 5px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .info-box.success {
+            background-color: #d4edda;
+            border-right-color: #28a745;
+        }
+        
+        .info-box.warning {
+            background-color: #fff3cd;
+            border-right-color: #ffc107;
+        }
+        
+        .info-box.danger {
+            background-color: #f8d7da;
+            border-right-color: #dc3545;
+        }
+        
+        .info-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .info-box.success h4 {
+            color: #28a745;
+        }
+        
+        .info-box.warning h4 {
+            color: #856404;
+        }
+        
+        .info-box.danger h4 {
+            color: #dc3545;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        table tr:hover {
+            background-color: #e8e9ff;
+            transition: background-color 0.3s;
+        }
+        
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+        
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            direction: ltr;
+            text-align: left;
+        }
+        
+        .code-block code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+        
+        ul, ol {
+            margin-right: 30px;
+            margin-top: 10px;
+        }
+        
+        ul li, ol li {
+            margin: 10px 0;
+        }
+        
+        .step-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .step-box h4 {
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 ربات معاملاتی طلا (XAUUSD)</h1>
+            <p>راهنمای کامل عملکرد و استفاده</p>
+            <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">استراتژی: Swing + Fibonacci Retracement + TP (2R)</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>📋 فهرست مطالب</h2>
+                <ol>
+                    <li><a href="#overview">معرفی ربات</a></li>
+                    <li><a href="#strategy">استراتژی معاملاتی</a></li>
+                    <li><a href="#installation">نصب و راه‌اندازی</a></li>
+                    <li><a href="#configuration">تنظیمات</a></li>
+                    <li><a href="#how-it-works">نحوه عملکرد</a></li>
+                    <li><a href="#phases">مراحل شناسایی سیگنال</a></li>
+                    <li><a href="#risk-management">مدیریت ریسک</a></li>
+                    <li><a href="#usage">نحوه استفاده</a></li>
+                    <li><a href="#monitoring">نظارت و مانیتورینگ</a></li>
+                    <li><a href="#results">نتایج تست‌ها</a></li>
+                    <li><a href="#troubleshooting">عیب‌یابی</a></li>
+                </ol>
+            </div>
+            
+            <div class="section" id="overview">
+                <h2>📖 معرفی ربات</h2>
+                <div class="info-box success">
+                    <h4>✅ ربات معاملاتی طلا (XAUUSD)</h4>
+                    <p>این ربات یک سیستم معاملاتی خودکار برای معامله روی طلا (XAUUSD) است که از ترکیب تحلیل Swing و سطوح Fibonacci Retracement برای شناسایی نقاط ورود استفاده می‌کند.</p>
+                </div>
+                
+                <h3>ویژگی‌های اصلی:</h3>
+                <ul>
+                    <li><strong>استراتژی مبتنی بر Swing:</strong> شناسایی نقاط Swing در نمودار</li>
+                    <li><strong>تحلیل Fibonacci:</strong> استفاده از سطوح 0.0، 0.705، 0.9 و 1.0</li>
+                    <li><strong>مدیریت ریسک:</strong> ریسک 1% در هر معامله</li>
+                    <li><strong>Risk/Reward:</strong> نسبت 1:2 (TP = 2R)</li>
+                    <li><strong>تایم‌فریم:</strong> M15 (15 دقیقه)</li>
+                    <li><strong>حساب دمو:</strong> آماده اجرا روی حساب دمو</li>
+                </ul>
+            </div>
+            
+            <div class="section" id="strategy">
+                <h2>🎯 استراتژی معاملاتی</h2>
+                
+                <h3>مفهوم کلی:</h3>
+                <p>ربات از ترکیب سه مفهوم اصلی استفاده می‌کند:</p>
+                
+                <div class="step-box">
+                    <h4>1️⃣ شناسایی Swing Points</h4>
+                    <p>ربات نقاط Swing (بالاترین و پایین‌ترین نقاط) را در نمودار شناسایی می‌کند. این نقاط نشان‌دهنده تغییر روند هستند.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>2️⃣ رسم سطوح Fibonacci</h4>
+                    <p>بعد از شناسایی Swing، ربات سطوح Fibonacci Retracement را بین نقطه Swing بالا و پایین رسم می‌کند.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>3️⃣ شناسایی سیگنال ورود</h4>
+                    <p>ربات منتظر می‌ماند تا قیمت دو بار سطح 0.705 را لمس کند (با تغییر وضعیت کندل). این نشان‌دهنده Pullback و آمادگی برای ورود است.</p>
+                </div>
+                
+                <h3>نقاط ورود:</h3>
+                <ul>
+                    <li><strong>BUY:</strong> وقتی Swing Bullish شناسایی شود و قیمت دو بار سطح 0.705 را لمس کند</li>
+                    <li><strong>SELL:</strong> وقتی Swing Bearish شناسایی شود و قیمت دو بار سطح 0.705 را لمس کند</li>
+                </ul>
+                
+                <h3>نقاط خروج:</h3>
+                <ul>
+                    <li><strong>Stop Loss (SL):</strong> سطح Fibonacci 1.0</li>
+                    <li><strong>Take Profit (TP):</strong> 2 برابر ریسک (2R)</li>
+                </ul>
+            </div>
+            
+            <div class="section" id="installation">
+                <h2>⚙️ نصب و راه‌اندازی</h2>
+                
+                <h3>پیش‌نیازها:</h3>
+                <ul>
+                    <li>Python 3.8 یا بالاتر</li>
+                    <li>MetaTrader 5 نصب شده</li>
+                    <li>حساب دمو در بروکر</li>
+                    <li>کتابخانه‌های Python مورد نیاز</li>
+                </ul>
+                
+                <h3>نصب کتابخانه‌ها:</h3>
+                <div class="code-block">
+                    <code>pip install MetaTrader5 pandas numpy colorama</code>
+                </div>
+                
+                <h3>ساختار فایل‌ها:</h3>
+                <ul>
+                    <li><code>main_metatrader_gold.py</code> - فایل اصلی ربات</li>
+                    <li><code>mt5_connector_gold.py</code> - اتصال به MT5</li>
+                    <li><code>metatrader5_config_gold.py</code> - تنظیمات</li>
+                    <li><code>get_legs_gold.py</code> - شناسایی Legs</li>
+                    <li><code>swing_gold.py</code> - شناسایی Swing</li>
+                    <li><code>fibo_calculate_gold.py</code> - محاسبه Fibonacci</li>
+                    <li><code>utils_gold.py</code> - توابع کمکی</li>
+                    <li><code>save_file_gold.py</code> - ذخیره لاگ</li>
+                </ul>
+            </div>
+            
+            <div class="section" id="configuration">
+                <h2>⚙️ تنظیمات</h2>
+                
+                <h3>تنظیمات اصلی (metatrader5_config_gold.py):</h3>
+                <table>
+                    <tr>
+                        <th>پارامتر</th>
+                        <th>مقدار پیش‌فرض</th>
+                        <th>توضیحات</th>
+                    </tr>
+                    <tr>
+                        <td><code>symbol</code></td>
+                        <td>XAUUSD</td>
+                        <td>نماد معاملاتی (طلا)</td>
+                    </tr>
+                    <tr>
+                        <td><code>timeframe</code></td>
+                        <td>M15</td>
+                        <td>تایم‌فریم 15 دقیقه</td>
+                    </tr>
+                    <tr>
+                        <td><code>risk_percent</code></td>
+                        <td>1.0</td>
+                        <td>ریسک 1% در هر معامله</td>
+                    </tr>
+                    <tr>
+                        <td><code>win_ratio</code></td>
+                        <td>2</td>
+                        <td>نسبت Risk/Reward (TP = 2R)</td>
+                    </tr>
+                    <tr>
+                        <td><code>magic_number</code></td>
+                        <td>234001</td>
+                        <td>شماره Magic برای شناسایی پوزیشن‌ها</td>
+                    </tr>
+                    <tr>
+                        <td><code>max_spread</code></td>
+                        <td>30.0</td>
+                        <td>حداکثر اسپرد مجاز (دلار)</td>
+                    </tr>
+                    <tr>
+                        <td><code>threshold</code></td>
+                        <td>20</td>
+                        <td>حداقل فاصله برای شناسایی Leg (دلار)</td>
+                    </tr>
+                    <tr>
+                        <td><code>window_size</code></td>
+                        <td>100</td>
+                        <td>تعداد کندل‌های مورد نیاز برای تحلیل</td>
+                    </tr>
+                </table>
+                
+                <h3>ساعات معاملاتی:</h3>
+                <div class="info-box">
+                    <p>به صورت پیش‌فرض، ربات در ساعات <span class="highlight">01:00 تا 23:59</span> (ساعت ایران) فعال است.</p>
+                    <p>می‌توانید این ساعات را در فایل <code>metatrader5_config_gold.py</code> تغییر دهید.</p>
+                </div>
+            </div>
+            
+            <div class="section" id="how-it-works">
+                <h2>🔧 نحوه عملکرد</h2>
+                
+                <h3>مراحل کلی:</h3>
+                
+                <div class="step-box">
+                    <h4>مرحله 1: اتصال به MT5</h4>
+                    <p>ربات به MetaTrader 5 متصل می‌شود و داده‌های قیمتی را دریافت می‌کند.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>مرحله 2: دریافت داده‌های تاریخی</h4>
+                    <p>ربات آخرین 200 کندل M15 را از MT5 دریافت می‌کند.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>مرحله 3: شناسایی Legs</h4>
+                    <p>ربات Legs (حرکات قیمتی) را شناسایی می‌کند. Leg باید حداقل 20 دلار فاصله داشته باشد.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>مرحله 4: شناسایی Swing</h4>
+                    <p>اگر حداقل 3 Leg شناسایی شود، ربات بررسی می‌کند که آیا Swing Point وجود دارد یا نه.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>مرحله 5: رسم Fibonacci</h4>
+                    <p>بعد از شناسایی Swing، ربات سطوح Fibonacci را بین نقطه Swing بالا و پایین رسم می‌کند.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>مرحله 6: شناسایی Touch</h4>
+                    <p>ربات منتظر می‌ماند تا قیمت سطح 0.705 را دو بار لمس کند (با تغییر وضعیت کندل).</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>مرحله 7: باز کردن پوزیشن</h4>
+                    <p>بعد از شناسایی Second Touch، ربات پوزیشن را با SL و TP باز می‌کند.</p>
+                </div>
+            </div>
+            
+            <div class="section" id="phases">
+                <h2>📊 مراحل شناسایی سیگنال</h2>
+                
+                <h3>Phase 1: ایجاد Fibonacci</h3>
+                <div class="info-box">
+                    <p>وقتی Swing شناسایی شود:</p>
+                    <ul>
+                        <li><strong>Bullish Swing:</strong> اگر قیمت بسته شدن کندل قبل از آخر بالاتر از شروع Leg دوم باشد</li>
+                        <li><strong>Bearish Swing:</strong> اگر قیمت بسته شدن کندل قبل از آخر پایین‌تر از شروع Leg دوم باشد</li>
+                    </ul>
+                    <p>در این صورت، ربات Fibonacci را بین نقطه Swing بالا (fib 0.0) و پایین (fib 1.0) رسم می‌کند.</p>
+                </div>
+                
+                <h3>Phase 2: به‌روزرسانی Fibonacci</h3>
+                <div class="info-box">
+                    <p>ربات به صورت مداوم Fibonacci را به‌روزرسانی می‌کند:</p>
+                    <ul>
+                        <li><strong>Bullish:</strong> اگر قیمت بالاتر از fib 0.0 برود، Fibonacci را به‌روزرسانی می‌کند</li>
+                        <li><strong>Bearish:</strong> اگر قیمت پایین‌تر از fib 0.0 برود، Fibonacci را به‌روزرسانی می‌کند</li>
+                    </ul>
+                    <p>اگر قیمت از fib 1.0 عبور کند، Fibonacci ریست می‌شود.</p>
+                </div>
+                
+                <h3>Phase 3: شناسایی Touch</h3>
+                <div class="info-box success">
+                    <h4>First Touch:</h4>
+                    <p>وقتی قیمت سطح 0.705 را لمس می‌کند، ربات وضعیت کندل را ذخیره می‌کند.</p>
+                    
+                    <h4>Second Touch:</h4>
+                    <p>وقتی قیمت دوباره سطح 0.705 را لمس می‌کند و وضعیت کندل تغییر کرده باشد (از bullish به bearish یا برعکس)، سیگنال ورود ایجاد می‌شود.</p>
+                </div>
+            </div>
+            
+            <div class="section" id="risk-management">
+                <h2>🛡️ مدیریت ریسک</h2>
+                
+                <h3>محاسبه حجم معامله:</h3>
+                <div class="info-box">
+                    <p>حجم معامله به صورت خودکار بر اساس ریسک محاسبه می‌شود:</p>
+                    <ul>
+                        <li><strong>ریسک:</strong> 1% از موجودی حساب</li>
+                        <li><strong>فاصله SL:</strong> فاصله بین Entry و SL</li>
+                        <li><strong>حجم:</strong> ریسک ÷ (فاصله SL × 100)</li>
+                    </ul>
+                </div>
+                
+                <h3>Stop Loss و Take Profit:</h3>
+                <table>
+                    <tr>
+                        <th>نوع</th>
+                        <th>محاسبه</th>
+                        <th>توضیحات</th>
+                    </tr>
+                    <tr>
+                        <td>Stop Loss</td>
+                        <td>سطح Fibonacci 1.0</td>
+                        <td>حداقل 0.5 دلار فاصله از Entry</td>
+                    </tr>
+                    <tr>
+                        <td>Take Profit</td>
+                        <td>Entry ± (2 × Risk)</td>
+                        <td>نسبت Risk/Reward = 1:2</td>
+                    </tr>
+                </table>
+                
+                <h3>محدودیت‌ها:</h3>
+                <ul>
+                    <li><strong>حداکثر اسپرد:</strong> 30 دلار</li>
+                    <li><strong>حداقل فاصله SL:</strong> 0.5 دلار</li>
+                    <li><strong>پیشگیری از پوزیشن‌های متعدد:</strong> فقط یک پوزیشن در هر زمان</li>
+                </ul>
+            </div>
+            
+            <div class="section" id="usage">
+                <h2>🚀 نحوه استفاده</h2>
+                
+                <h3>اجرای ربات:</h3>
+                <div class="code-block">
+                    <code>python main_metatrader_gold.py</code>
+                </div>
+                
+                <h3>قبل از اجرا:</h3>
+                <div class="info-box warning">
+                    <h4>⚠️ نکات مهم:</h4>
+                    <ol>
+                        <li>مطمئن شوید MetaTrader 5 باز است</li>
+                        <li>حساب دمو را در MT5 باز کنید</li>
+                        <li>AutoTrading را در MT5 فعال کنید</li>
+                        <li>نماد XAUUSD را در Market Watch اضافه کنید</li>
+                    </ol>
+                </div>
+                
+                <h3>خروج از ربات:</h3>
+                <p>برای توقف ربات، کلید <code>Ctrl+C</code> را فشار دهید.</p>
+            </div>
+            
+            <div class="section" id="monitoring">
+                <h2>📊 نظارت و مانیتورینگ</h2>
+                
+                <h3>لاگ‌ها:</h3>
+                <div class="info-box">
+                    <p>ربات تمام فعالیت‌های خود را در فایل لاگ ذخیره می‌کند:</p>
+                    <ul>
+                        <li><strong>نام فایل:</strong> <code>gold_swing_logs_YYYY-MM-DD.txt</code></li>
+                        <li><strong>محل ذخیره:</strong> همان پوشه ربات</li>
+                    </ul>
+                </div>
+                
+                <h3>اطلاعات نمایش داده شده:</h3>
+                <ul>
+                    <li>زمان دریافت داده جدید</li>
+                    <li>شناسایی Swing و Fibonacci</li>
+                    <li>Touch های شناسایی شده</li>
+                    <li>باز شدن پوزیشن‌ها</li>
+                    <li>خطاها و هشدارها</li>
+                </ul>
+            </div>
+            
+            <div class="section" id="results">
+                <h2>📈 نتایج تست‌ها</h2>
+                
+                <h3>تست بک‌تست (3 ماه):</h3>
+                <table>
+                    <tr>
+                        <th>معیار</th>
+                        <th>نتیجه</th>
+                    </tr>
+                    <tr>
+                        <td>بازده</td>
+                        <td>+5.86%</td>
+                    </tr>
+                    <tr>
+                        <td>نرخ برد</td>
+                        <td>46.15%</td>
+                    </tr>
+                    <tr>
+                        <td>Profit Factor</td>
+                        <td>1.87</td>
+                    </tr>
+                    <tr>
+                        <td>میانگین R</td>
+                        <td>0.44</td>
+                    </tr>
+                    <tr>
+                        <td>تعداد معاملات</td>
+                        <td>13</td>
+                    </tr>
+                </table>
+                
+                <h3>تست صحت‌سنجی (30 روز):</h3>
+                <table>
+                    <tr>
+                        <th>معیار</th>
+                        <th>نتیجه</th>
+                    </tr>
+                    <tr>
+                        <td>بازده</td>
+                        <td>+0.69%</td>
+                    </tr>
+                    <tr>
+                        <td>نرخ برد</td>
+                        <td>37.5%</td>
+                    </tr>
+                    <tr>
+                        <td>Profit Factor</td>
+                        <td>1.14</td>
+                    </tr>
+                    <tr>
+                        <td>میانگین R</td>
+                        <td>0.12</td>
+                    </tr>
+                    <tr>
+                        <td>تعداد معاملات</td>
+                        <td>8</td>
+                    </tr>
+                </table>
+                
+                <div class="info-box success">
+                    <h4>✅ نتیجه:</h4>
+                    <p>ربات در تست‌های مختلف نتایج مثبت نشان داده است و آماده استفاده روی حساب دمو است.</p>
+                </div>
+            </div>
+            
+            <div class="section" id="troubleshooting">
+                <h2>🔧 عیب‌یابی</h2>
+                
+                <h3>مشکلات رایج:</h3>
+                
+                <div class="info-box danger">
+                    <h4>❌ خطا: Failed to connect to MT5</h4>
+                    <p><strong>راه حل:</strong></p>
+                    <ul>
+                        <li>مطمئن شوید MetaTrader 5 باز است</li>
+                        <li>بررسی کنید که حساب دمو در MT5 فعال است</li>
+                        <li>اتصال اینترنت را بررسی کنید</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box danger">
+                    <h4>❌ خطا: Terminal AutoTrading disabled</h4>
+                    <p><strong>راه حل:</strong></p>
+                    <ul>
+                        <li>در MT5، دکمه AutoTrading را فعال کنید</li>
+                        <li>یا از منوی Tools → Options → Expert Advisors → Allow automated trading</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box danger">
+                    <h4>❌ خطا: Symbol not found</h4>
+                    <p><strong>راه حل:</strong></p>
+                    <ul>
+                        <li>نماد XAUUSD را در Market Watch اضافه کنید</li>
+                        <li>یا در کد، نماد را به نماد موجود در بروکر تغییر دهید</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box warning">
+                    <h4>⚠️ هیچ سیگنالی شناسایی نمی‌شود</h4>
+                    <p><strong>دلایل ممکن:</strong></p>
+                    <ul>
+                        <li>شرایط بازار مناسب نیست</li>
+                        <li>داده‌های کافی وجود ندارد (نیاز به حداقل 100 کندل)</li>
+                        <li>Swing Point شناسایی نشده است</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📝 نکات مهم</h2>
+                
+                <div class="info-box warning">
+                    <h4>⚠️ هشدارها:</h4>
+                    <ul>
+                        <li>این ربات برای حساب <strong>دمو</strong> طراحی شده است</li>
+                        <li>قبل از استفاده روی حساب واقعی، حتماً تست کامل انجام دهید</li>
+                        <li>همیشه نظارت کنید و در صورت نیاز ربات را متوقف کنید</li>
+                        <li>نتایج گذشته تضمینی برای آینده نیست</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box success">
+                    <h4>✅ توصیه‌ها:</h4>
+                    <ul>
+                        <li>ربات را ابتدا روی حساب دمو تست کنید</li>
+                        <li>لاگ‌ها را به صورت منظم بررسی کنید</li>
+                        <li>تنظیمات را متناسب با استراتژی خود تغییر دهید</li>
+                        <li>همیشه از مدیریت ریسک مناسب استفاده کنید</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>ربات معاملاتی طلا (XAUUSD)</strong></p>
+            <p>استراتژی: Swing + Fibonacci Retracement + TP (2R)</p>
+            <p>تایم‌فریم: M15 | ریسک: 1% | TP: 2R</p>
+            <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.8;">
+                نسخه: 1.0 | تاریخ: نوامبر 2025
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

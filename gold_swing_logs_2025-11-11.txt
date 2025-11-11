@@ -1,0 +1,39 @@
+🚀 Gold Trading Bot Started...
+📊 Config: Symbol=XAUUSD, Risk=1.0%, TP=2R
+⏰ Trading Hours (Iran): 01:00 - 23:59
+🇮🇷 Current Iran Time: 2025-11-11 21:33:51
+🔄 First run - processing data from 2025-11-11 23:30:00+03:30
+📊 Processing 200 data points | Window: 100
+Current time: 2025-11-11 23:30:00+03:30
+🛑 Bot stopped by user
+🚀 Gold Trading Bot Started...
+📊 Config: Symbol=XAUUSD, Risk=1.0%, TP=2R
+⏰ Trading Hours (Iran): 01:00 - 23:59
+🇮🇷 Current Iran Time: 2025-11-11 21:40:36
+🔄 First run - processing data from 2025-11-11 23:30:00+03:30
+📊 Processing 200 data points | Window: 100
+Current time: 2025-11-11 23:30:00+03:30
+🚀 Gold Trading Bot Started...
+📊 Config: Symbol=XAUUSD, Risk=1.0%, TP=2R
+⏰ Trading Hours (Iran): 01:00 - 23:59
+🇮🇷 Current Iran Time: 2025-11-11 21:41:31
+🔄 First run - processing data from 2025-11-11 23:30:00+03:30
+📊 Processing 200 data points | Window: 100
+Current time: 2025-11-11 23:30:00+03:30
+🛑 Bot stopped by user
+📊 New data received: 2025-11-11 23:45:00+03:30
+📊 Processing 200 data points | Window: 100
+Current time: 2025-11-11 23:45:00+03:30
+🛑 Bot stopped by user
+🚀 Gold Trading Bot Started...
+📊 Config: Symbol=XAUUSD, Risk=1.0%, TP=2R
+⏰ Trading Hours (Iran): 01:00 - 23:59
+🇮🇷 Current Iran Time: 2025-11-11 21:46:22
+🔄 First run - processing data from 2025-11-11 23:45:00+03:30
+📊 Processing 200 data points | Window: 100
+Current time: 2025-11-11 23:45:00+03:30
+📌 No open positions
+📊 Legs identified: 7
+📊 Swing analysis: type=bullish, is_swing=True
+📊 Status: Legs=3, FibActive=False, FirstTouch=False, SecondTouch=False, SwingType=None
+================================================================================
