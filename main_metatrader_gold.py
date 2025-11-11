@@ -1,6 +1,6 @@
 """
 ربات معاملاتی طلا (XAUUSD) - آماده اجرا روی حساب دمو
-استراتژی: Swing + Fibonacci Retracement + TP (2R)
+استراتژی: Swing + Fibonacci Retracement + Trailing Stop
 """
 
 import MetaTrader5 as mt5
@@ -15,7 +15,7 @@ from mt5_connector_gold import MT5ConnectorGold
 from swing_gold import get_swing_points
 from utils_gold import BotState
 from save_file_gold import log
-from metatrader5_config_gold import MT5_CONFIG, TRADING_CONFIG
+from metatrader5_config_gold import MT5_CONFIG, TRADING_CONFIG, EXIT_MANAGEMENT_CONFIG
 from email_notifier_gold import send_trade_email_async
 from analytics.hooks import log_signal, log_trade, log_position_event, log_market
 
@@ -25,6 +25,79 @@ def has_open_positions():
     """بررسی وجود پوزیشن باز"""
     positions = mt5.positions_get(symbol=MT5_CONFIG['symbol'])
     return positions is not None and len(positions) > 0
+
+def manage_trailing_stop(position, tick, mt5_conn):
+    """
+    مدیریت Trailing Stop برای پوزیشن باز
+    
+    Parameters:
+    -----------
+    position: MT5 position object
+    tick: MT5 tick object
+    mt5_conn: MT5ConnectorGold instance
+    
+    Returns:
+    --------
+    bool: True if SL was updated, False otherwise
+    """
+    if not EXIT_MANAGEMENT_CONFIG.get('enable', False):
+        return False
+    
+    trailing_config = EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {})
+    if not trailing_config.get('enable', False):
+        return False
+    
+    start_r = trailing_config.get('start_r', 1.5)
+    gap_r = trailing_config.get('gap_r', 0.5)
+    
+    # محاسبه ریسک اولیه
+    entry = position.price_open
+    original_sl = position.sl
+    risk = abs(entry - original_sl)
+    
+    if risk <= 0:
+        return False
+    
+    # محاسبه سود فعلی بر حسب R
+    if position.type == mt5.POSITION_TYPE_BUY:
+        current_price = tick.bid
+        current_profit = current_price - entry
+        current_profit_R = current_profit / risk if risk > 0 else 0
+        
+        # اگر سود به start_r رسید، Trailing Stop را فعال کن
+        if current_profit_R >= start_r:
+            # محاسبه SL جدید
+            new_sl = current_price - (gap_r * risk)
+            
+            # فقط اگر SL جدید بالاتر از SL فعلی باشد، به‌روزرسانی کن
+            if new_sl > position.sl:
+                result = mt5_conn.modify_sl_tp(position.ticket, new_sl=new_sl, new_tp=None)
+                if result and result.retcode == 10009:  # TRADE_RETCODE_DONE
+                    log(f"📈 Trailing Stop updated: Ticket={position.ticket}, Old SL={position.sl:.2f}, New SL={new_sl:.2f}, Profit={current_profit_R:.2f}R", color='green')
+                    return True
+                else:
+                    log(f"❌ Failed to update Trailing Stop: {result.comment if result else 'No result'}", color='red')
+    
+    elif position.type == mt5.POSITION_TYPE_SELL:
+        current_price = tick.ask
+        current_profit = entry - current_price
+        current_profit_R = current_profit / risk if risk > 0 else 0
+        
+        # اگر سود به start_r رسید، Trailing Stop را فعال کن
+        if current_profit_R >= start_r:
+            # محاسبه SL جدید
+            new_sl = current_price + (gap_r * risk)
+            
+            # فقط اگر SL جدید پایین‌تر از SL فعلی باشد، به‌روزرسانی کن
+            if new_sl < position.sl:
+                result = mt5_conn.modify_sl_tp(position.ticket, new_sl=new_sl, new_tp=None)
+                if result and result.retcode == 10009:  # TRADE_RETCODE_DONE
+                    log(f"📉 Trailing Stop updated: Ticket={position.ticket}, Old SL={position.sl:.2f}, New SL={new_sl:.2f}, Profit={current_profit_R:.2f}R", color='green')
+                    return True
+                else:
+                    log(f"❌ Failed to update Trailing Stop: {result.comment if result else 'No result'}", color='red')
+    
+    return False
 
 def get_open_positions():
     """دریافت پوزیشن‌های باز"""
@@ -65,9 +138,16 @@ def main():
     last_data_time = None
     wait_count = 0
     max_wait_cycles = 100
+    trade_count = 0  # شمارنده کل معاملات (برای استفاده از first touch در اولین معامله)
+    trades_today = 0  # شمارنده معاملات امروز
+    last_trade_date = None  # تاریخ آخرین معامله
 
     log("🚀 Gold Trading Bot Started...", color='green')
-    log(f"📊 Config: Symbol={MT5_CONFIG['symbol']}, Risk={risk_percent}%, TP={win_ratio}R", color='cyan')
+    trailing_config = EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {})
+    if trailing_config.get('enable', False):
+        log(f"📊 Config: Symbol={MT5_CONFIG['symbol']}, Risk={risk_percent}%, Trailing Stop (Start: {trailing_config.get('start_r', 1.5)}R, Gap: {trailing_config.get('gap_r', 0.5)}R)", color='cyan')
+    else:
+        log(f"📊 Config: Symbol={MT5_CONFIG['symbol']}, Risk={risk_percent}%, TP={win_ratio}R", color='cyan')
     log(f"⏰ Trading Hours (Iran): {MT5_CONFIG['trading_hours']['start']} - {MT5_CONFIG['trading_hours']['end']}", color='cyan')
     log(f"🇮🇷 Current Iran Time: {mt5_conn.get_iran_time().strftime('%Y-%m-%d %H:%M:%S')}", color='cyan')
 
@@ -79,6 +159,17 @@ def main():
             if not can_trade:
                 log(f"⏰ {trade_message}", color='yellow', save_to_file=False)
                 sleep(60)
+                continue
+            
+            # بررسی تعداد معاملات روزانه
+            current_date = mt5_conn.get_iran_time().date()
+            if last_trade_date != current_date:
+                trades_today = 0
+                last_trade_date = current_date
+            
+            if trades_today >= MT5_CONFIG['max_daily_trades']:
+                log(f"⚠️ Max daily trades reached ({MT5_CONFIG['max_daily_trades']})", color='yellow', save_to_file=False)
+                sleep(300)  # 5 دقیقه صبر
                 continue
 
             # دریافت داده از MT5
@@ -134,14 +225,18 @@ def main():
                 log(f'📊 Processing {len(cache_data)} data points | Window: {window_size}', color='cyan')
                 log(f'Current time: {cache_data.index[-1]}', color='yellow')
                 
-                # بررسی پوزیشن‌های باز
+                # بررسی پوزیشن‌های باز و مدیریت Trailing Stop
                 open_positions = get_open_positions()
                 if open_positions:
                     log(f"📌 {len(open_positions)} open position(s) detected", color='yellow')
-                    for pos in open_positions:
-                        log(f"   Ticket: {pos.ticket}, Type: {'BUY' if pos.type == 0 else 'SELL'}, "
-                            f"Entry: {pos.price_open:.2f}, SL: {pos.sl:.2f}, TP: {pos.tp:.2f}, "
-                            f"Profit: {pos.profit:.2f}", color='yellow')
+                    tick = mt5.symbol_info_tick(MT5_CONFIG['symbol'])
+                    if tick:
+                        for pos in open_positions:
+                            log(f"   Ticket: {pos.ticket}, Type: {'BUY' if pos.type == 0 else 'SELL'}, "
+                                f"Entry: {pos.price_open:.2f}, SL: {pos.sl:.2f}, TP: {pos.tp:.2f}, "
+                                f"Profit: {pos.profit:.2f}", color='yellow')
+                            # مدیریت Trailing Stop
+                            manage_trailing_stop(pos, tick, mt5_conn)
                 else:
                     log(f"📌 No open positions", color='cyan')
                 
@@ -149,41 +244,76 @@ def main():
                 legs = get_legs(cache_data, threshold)
                 log(f'📊 Legs identified: {len(legs)}', color='cyan')
                 
-                if len(legs) > 2:
-                    legs = legs[-3:]
-                    swing_type, is_swing = get_swing_points(data=cache_data, legs=legs)
+                # استفاده از 2 یا 3 leg (Optimized)
+                if len(legs) >= 2:
+                    if len(legs) >= 3:
+                        legs = legs[-3:]
+                    else:
+                        legs = legs[-2:]
+                    
+                    min_candles = TRADING_CONFIG.get('min_swing_size', 2)
+                    swing_type, is_swing = get_swing_points(data=cache_data, legs=legs, min_candles=min_candles)
                     log(f'📊 Swing analysis: type={swing_type}, is_swing={is_swing}', color='cyan')
 
-                    # Phase 1: ایجاد Fibonacci
+                    # Phase 1: ایجاد Fibonacci (Optimized)
                     if is_swing:
-                        if swing_type == 'bullish' and cache_data.iloc[-2]['close'] > legs[1]['start_value']:
-                            state.reset()
-                            state.fib_levels = fibonacci_retracement(
-                                start_price=legs[2]['end_value'],
-                                end_price=legs[2]['start_value']
-                            )
-                            state.fib0_time = legs[2]['start']
-                            state.fib1_time = legs[2]['end']
-                            last_swing_type = swing_type
-                            log(f"📈 New bullish fibonacci created: fib1:{state.fib_levels['1.0']:.2f} "
-                                f"fib0.705:{state.fib_levels['0.705']:.2f} fib0:{state.fib_levels['0.0']:.2f}", 
-                                color='green')
+                        if swing_type == 'bullish':
+                            # شرایط آسان‌تر: فقط بررسی کنیم که قیمت بالاتر از نقطه pullback باشد
+                            if len(legs) >= 3:
+                                check_price = legs[1]['start_value']
+                            else:
+                                check_price = legs[0]['start_value']
+                            
+                            if cache_data.iloc[-2]['close'] > check_price * 0.99:  # 1% tolerance
+                                state.reset()
+                                if len(legs) >= 3:
+                                    state.fib_levels = fibonacci_retracement(
+                                        start_price=legs[2]['end_value'],
+                                        end_price=legs[2]['start_value']
+                                    )
+                                    state.fib0_time = legs[2]['start']
+                                    state.fib1_time = legs[2]['end']
+                                else:
+                                    state.fib_levels = fibonacci_retracement(
+                                        start_price=legs[1]['end_value'],
+                                        end_price=legs[0]['start_value']
+                                    )
+                                    state.fib0_time = legs[0]['start']
+                                    state.fib1_time = legs[1]['end']
+                                last_swing_type = swing_type
+                                log(f"📈 New bullish fibonacci created: fib1:{state.fib_levels['1.0']:.2f} "
+                                    f"fib0.705:{state.fib_levels['0.705']:.2f} fib0:{state.fib_levels['0.0']:.2f}", 
+                                    color='green')
 
-                        elif swing_type == 'bearish' and cache_data.iloc[-2]['close'] < legs[1]['start_value']:
-                            state.reset()
-                            state.fib_levels = fibonacci_retracement(
-                                start_price=legs[2]['end_value'],
-                                end_price=legs[2]['start_value']
-                            )
-                            state.fib0_time = legs[2]['start']
-                            state.fib1_time = legs[2]['end']
-                            last_swing_type = swing_type
-                            log(f"📉 New bearish fibonacci created: fib1:{state.fib_levels['1.0']:.2f} "
-                                f"fib0.705:{state.fib_levels['0.705']:.2f} fib0:{state.fib_levels['0.0']:.2f}", 
-                                color='green')
+                        elif swing_type == 'bearish':
+                            if len(legs) >= 3:
+                                check_price = legs[1]['start_value']
+                            else:
+                                check_price = legs[0]['start_value']
+                            
+                            if cache_data.iloc[-2]['close'] < check_price * 1.01:  # 1% tolerance
+                                state.reset()
+                                if len(legs) >= 3:
+                                    state.fib_levels = fibonacci_retracement(
+                                        start_price=legs[2]['end_value'],
+                                        end_price=legs[2]['start_value']
+                                    )
+                                    state.fib0_time = legs[2]['start']
+                                    state.fib1_time = legs[2]['end']
+                                else:
+                                    state.fib_levels = fibonacci_retracement(
+                                        start_price=legs[1]['end_value'],
+                                        end_price=legs[0]['start_value']
+                                    )
+                                    state.fib0_time = legs[0]['start']
+                                    state.fib1_time = legs[1]['end']
+                                last_swing_type = swing_type
+                                log(f"📉 New bearish fibonacci created: fib1:{state.fib_levels['1.0']:.2f} "
+                                    f"fib0.705:{state.fib_levels['0.705']:.2f} fib0:{state.fib_levels['0.0']:.2f}", 
+                                    color='green')
 
                 else:
-                    log(f'⚠️ Not enough legs ({len(legs)}) - need at least 3 for swing analysis', color='yellow')
+                    log(f'⚠️ Not enough legs ({len(legs)}) - need at least 2 for swing analysis', color='yellow')
                 
                 # Phase 2: به‌روزرسانی Fibonacci
                 if state.fib_levels:
@@ -203,16 +333,18 @@ def main():
                             elif cache_data.iloc[-2]['low'] < state.fib_levels['1.0']:
                                 state.reset()
                                 log(f"📈 Price dropped below fib1 - reset", color='red')
-                            elif cache_data.iloc[-2]['low'] <= state.fib_levels['0.705']:
+                            # شرایط touch آسان‌تر (Optimized): tolerance 1%
+                            elif cache_data.iloc[-2]['low'] <= state.fib_levels['0.705'] * 1.01:
                                 if not state.first_touch:
                                     state.first_touch_value = cache_data.iloc[-2]
                                     state.first_touch = True
                                     log(f"📈 First touch on fib0.705", color='yellow')
-                                elif state.first_touch and not state.second_touch and \
-                                     cache_data.iloc[-2]['status'] != state.first_touch_value['status']:
-                                    state.second_touch_value = cache_data.iloc[-2]
-                                    state.second_touch = True
-                                    log(f"📈 Second touch detected - signal ready!", color='green')
+                                elif state.first_touch and not state.second_touch:
+                                    # دومین touch: فقط بررسی کنیم که قیمت دوباره به سطح نزدیک شده
+                                    if abs(cache_data.iloc[-2]['low'] - state.fib_levels['0.705']) < abs(state.first_touch_value['low'] - state.fib_levels['0.705']) * 1.5:
+                                        state.second_touch_value = cache_data.iloc[-2]
+                                        state.second_touch = True
+                                        log(f"📈 Second touch detected - signal ready!", color='green')
 
                         elif last_swing_type == 'bearish':
                             if cache_data.iloc[-2]['low'] < state.fib_levels['0.0']:
@@ -228,23 +360,29 @@ def main():
                             elif cache_data.iloc[-2]['high'] > state.fib_levels['1.0']:
                                 state.reset()
                                 log(f"📉 Price rose above fib1 - reset", color='red')
-                            elif cache_data.iloc[-2]['high'] >= state.fib_levels['0.705']:
+                            # شرایط touch آسان‌تر (Optimized): tolerance 1%
+                            elif cache_data.iloc[-2]['high'] >= state.fib_levels['0.705'] * 0.99:
                                 if not state.first_touch:
                                     state.first_touch_value = cache_data.iloc[-2]
                                     state.first_touch = True
                                     log(f"📉 First touch on fib0.705", color='yellow')
-                                elif state.first_touch and not state.second_touch and \
-                                     cache_data.iloc[-2]['status'] != state.first_touch_value['status']:
-                                    state.second_touch_value = cache_data.iloc[-2]
-                                    state.second_touch = True
-                                    log(f"📉 Second touch detected - signal ready!", color='green')
+                                elif state.first_touch and not state.second_touch:
+                                    # دومین touch: فقط بررسی کنیم که قیمت دوباره به سطح نزدیک شده
+                                    if abs(cache_data.iloc[-2]['high'] - state.fib_levels['0.705']) < abs(state.first_touch_value['high'] - state.fib_levels['0.705']) * 1.5:
+                                        state.second_touch_value = cache_data.iloc[-2]
+                                        state.second_touch = True
+                                        log(f"📉 Second touch detected - signal ready!", color='green')
                 else:
                     if len(legs) <= 2:
                         log(f'📊 No fibonacci levels active - waiting for swing formation', color='yellow')
                 
-                # Phase 3: بررسی سیگنال و باز کردن پوزیشن
+                # Phase 3: بررسی سیگنال و باز کردن پوزیشن (Optimized)
+                # امکان ورود با first touch در اولین معامله
+                use_first_touch = TRADING_CONFIG.get('use_first_touch', True)
+                can_enter = state.second_touch or (use_first_touch and state.first_touch and trade_count == 0)
+                
                 if state.fib_levels and last_swing_type:
-                    if last_swing_type == 'bullish' and state.second_touch:
+                    if last_swing_type == 'bullish' and can_enter:
                         # با توجه به تایم‌فریم M15، اجازه باز کردن چند پوزیشن همزمان داده می‌شود
                         # اگر می‌خواهید فقط یک پوزیشن باز باشد، prevent_multiple_positions را True کنید
                         if TRADING_CONFIG.get('prevent_multiple_positions', False) and has_open_positions():
@@ -297,9 +435,10 @@ def main():
                         
                         sl = candidate_sl
                         risk = abs(entry_price - sl)
-                        tp = entry_price + (win_ratio * risk)
+                        # بدون TP ثابت - فقط Trailing Stop
+                        tp = None
                         
-                        log(f"📈 BUY Signal: Entry={entry_price:.2f}, SL={sl:.2f}, TP={tp:.2f}", color='green')
+                        log(f"📈 BUY Signal: Entry={entry_price:.2f}, SL={sl:.2f}, TP=None (Trailing Stop)", color='green')
                         
                         # ثبت سیگنال در CSV
                         try:
@@ -368,6 +507,8 @@ def main():
                         
                         if result and result.retcode == 10009:  # TRADE_RETCODE_DONE
                             log(f"✅ BUY Position opened: Ticket={result.order}", color='green')
+                            trade_count += 1
+                            trades_today += 1
                             
                             # ثبت رویداد باز شدن پوزیشن
                             try:
@@ -414,7 +555,7 @@ def main():
                         
                         state.reset()
 
-                    elif last_swing_type == 'bearish' and state.second_touch:
+                    elif last_swing_type == 'bearish' and can_enter:
                         # با توجه به تایم‌فریم M15، اجازه باز کردن چند پوزیشن همزمان داده می‌شود
                         # اگر می‌خواهید فقط یک پوزیشن باز باشد، prevent_multiple_positions را True کنید
                         if TRADING_CONFIG.get('prevent_multiple_positions', False) and has_open_positions():
@@ -464,9 +605,10 @@ def main():
                         
                         sl = candidate_sl
                         risk = abs(entry_price - sl)
-                        tp = entry_price - (win_ratio * risk)
+                        # بدون TP ثابت - فقط Trailing Stop
+                        tp = None
                         
-                        log(f"📉 SELL Signal: Entry={entry_price:.2f}, SL={sl:.2f}, TP={tp:.2f}", color='green')
+                        log(f"📉 SELL Signal: Entry={entry_price:.2f}, SL={sl:.2f}, TP=None (Trailing Stop)", color='green')
                         
                         # ثبت سیگنال در CSV
                         try:
@@ -535,6 +677,8 @@ def main():
                         
                         if result and result.retcode == 10009:  # TRADE_RETCODE_DONE
                             log(f"✅ SELL Position opened: Ticket={result.order}", color='green')
+                            trade_count += 1
+                            trades_today += 1
                             
                             # ثبت رویداد باز شدن پوزیشن
                             try:

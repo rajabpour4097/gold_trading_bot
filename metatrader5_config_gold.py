@@ -58,22 +58,24 @@ MT5_CONFIG = {
     'deviation': 20,
     'max_spread': 30.0,  # برای طلا اسپرد بیشتر است (معمولاً 20-30 دلار)
     'min_balance': 1,
-    'max_daily_trades': 10,
+    'max_daily_trades': 5,  # کاهش از 10 به 5 (Optimized)
     'trading_hours': MY_CUSTOM_TIME_IRAN,
 }
 
-# تنظیمات استراتژی برای طلا
-# طلا نوسانات بیشتری دارد، بنابراین threshold باید بیشتر باشد
+# تنظیمات استراتژی Optimized برای طلا
+# بر اساس نتایج بک‌تست: 57.93% بازده در 10 ماه
 TRADING_CONFIG = {
-    'threshold': 20,  # برای طلا: 20 دلار (معادل ~6 پیپ در EURUSD)
+    'threshold': 12,  # کاهش از 20 به 12 (Optimized)
     'fib_705': 0.705,
     'fib_90': 0.9,
-    'window_size': 100,
-    'min_swing_size': 4,
-    'entry_tolerance': 2.0,
+    'window_size': 60,  # کاهش از 100 به 60 (Optimized)
+    'min_swing_size': 2,  # کاهش از 4 به 2 (Optimized - نیاز به 2 کندل)
+    'min_dist': 0.5,  # حداقل فاصله SL از Entry
+    'entry_tolerance': 0.01,  # tolerance 1% برای touch
     'lookback_period': 20,
-    'prevent_multiple_positions': False,  # اجازه باز کردن چند پوزیشن همزمان (مناسب برای تایم‌فریم M15)
+    'prevent_multiple_positions': True,  # جلوگیری از چند پوزیشن همزمان (Optimized)
     'position_check_mode': 'all',
+    'use_first_touch': True,  # امکان ورود با first touch در اولین معامله (Optimized)
 }
 
 # مدیریت خروج با Trailing Stop - تنظیم شده برای طلا
@@ -82,7 +84,7 @@ EXIT_MANAGEMENT_CONFIG = {
     'trailing_stop': {
         'enable': True,
         'start_r': 1.5,      # شروع Trailing در 1.5R
-        'gap_r': 0.4,        # فاصله 0.4R از قیمت فعلی
+        'gap_r': 0.5,        # فاصله 0.5R از قیمت فعلی
     },
     'scale_out': {
         'enable': False,
@@ -91,7 +93,7 @@ EXIT_MANAGEMENT_CONFIG = {
         'enable': False,
     },
     'take_profit': {
-        'enable': False,
+        'enable': False,     # TP ثابت غیرفعال (فقط Trailing Stop)
     }
 }
 
