@@ -141,6 +141,7 @@ def main():
     trade_count = 0  # شمارنده کل معاملات (برای استفاده از first touch در اولین معامله)
     trades_today = 0  # شمارنده معاملات امروز
     last_trade_date = None  # تاریخ آخرین معامله
+    is_first_run = True  # Flag برای تشخیص اولین اجرا
 
     log("🚀 Gold Trading Bot Started...", color='green')
     trailing_config = EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {})
@@ -208,12 +209,17 @@ def main():
             
             if last_data_time is None:
                 log(f"🔄 First run - processing data from {current_time}", color='cyan')
+                log(f"⏳ Waiting for new touch signals before entering trades...", color='yellow')
                 last_data_time = current_time
                 process_data = True
+                is_first_run = True
             elif current_time != last_data_time:
                 log(f"📊 New data received: {current_time}", color='cyan')
                 last_data_time = current_time
                 process_data = True
+                if is_first_run:
+                    is_first_run = False
+                    log(f"✅ First run completed - now ready to enter trades", color='green')
             else:
                 wait_count += 1
                 if wait_count % 12 == 0:  # هر 60 ثانیه یک بار (12 * 5)
@@ -257,7 +263,11 @@ def main():
                     log(f'📊 Swing analysis: type={swing_type}, is_swing={is_swing}', color='cyan')
 
                     # Phase 1: ایجاد Fibonacci (Optimized)
+                    # فقط اگر Fibonacci وجود نداشته باشد یا Swing جدید شناسایی شده باشد، Fibonacci ایجاد می‌شود
                     if is_swing:
+                        # بررسی اینکه آیا باید Fibonacci جدید ایجاد شود
+                        should_create_fib = False
+                        
                         if swing_type == 'bullish':
                             # شرایط آسان‌تر: فقط بررسی کنیم که قیمت بالاتر از نقطه pullback باشد
                             if len(legs) >= 3:
@@ -265,8 +275,48 @@ def main():
                             else:
                                 check_price = legs[0]['start_value']
                             
-                            if cache_data.iloc[-2]['close'] > check_price * 0.99:  # 1% tolerance
-                                state.reset()
+                            # فقط اگر Fibonacci وجود نداشته باشد یا Swing جدید باشد، ایجاد کن
+                            if not state.fib_levels or last_swing_type != swing_type:
+                                if cache_data.iloc[-2]['close'] > check_price * 0.99:  # 1% tolerance
+                                    should_create_fib = True
+                            # اگر Fibonacci وجود دارد و Swing همان است، بررسی کن که آیا باید به‌روزرسانی شود
+                            elif state.fib_levels and last_swing_type == swing_type:
+                                # اگر Swing جدیدی شناسایی شده (legs تغییر کرده)، Fibonacci جدید ایجاد کن
+                                if len(legs) >= 3:
+                                    new_fib1_time = legs[2]['end']
+                                else:
+                                    new_fib1_time = legs[1]['end']
+                                # اگر زمان fib1 تغییر کرده، Fibonacci جدید ایجاد کن
+                                if state.fib1_time != new_fib1_time:
+                                    if cache_data.iloc[-2]['close'] > check_price * 0.99:
+                                        should_create_fib = True
+
+                        elif swing_type == 'bearish':
+                            if len(legs) >= 3:
+                                check_price = legs[1]['start_value']
+                            else:
+                                check_price = legs[0]['start_value']
+                            
+                            # فقط اگر Fibonacci وجود نداشته باشد یا Swing جدید باشد، ایجاد کن
+                            if not state.fib_levels or last_swing_type != swing_type:
+                                if cache_data.iloc[-2]['close'] < check_price * 1.01:  # 1% tolerance
+                                    should_create_fib = True
+                            # اگر Fibonacci وجود دارد و Swing همان است، بررسی کن که آیا باید به‌روزرسانی شود
+                            elif state.fib_levels and last_swing_type == swing_type:
+                                # اگر Swing جدیدی شناسایی شده (legs تغییر کرده)، Fibonacci جدید ایجاد کن
+                                if len(legs) >= 3:
+                                    new_fib1_time = legs[2]['end']
+                                else:
+                                    new_fib1_time = legs[1]['end']
+                                # اگر زمان fib1 تغییر کرده، Fibonacci جدید ایجاد کن
+                                if state.fib1_time != new_fib1_time:
+                                    if cache_data.iloc[-2]['close'] < check_price * 1.01:
+                                        should_create_fib = True
+                        
+                        # ایجاد Fibonacci جدید
+                        if should_create_fib:
+                            state.reset()
+                            if swing_type == 'bullish':
                                 if len(legs) >= 3:
                                     state.fib_levels = fibonacci_retracement(
                                         start_price=legs[2]['end_value'],
@@ -285,15 +335,7 @@ def main():
                                 log(f"📈 New bullish fibonacci created: fib1:{state.fib_levels['1.0']:.2f} "
                                     f"fib0.705:{state.fib_levels['0.705']:.2f} fib0:{state.fib_levels['0.0']:.2f}", 
                                     color='green')
-
-                        elif swing_type == 'bearish':
-                            if len(legs) >= 3:
-                                check_price = legs[1]['start_value']
-                            else:
-                                check_price = legs[0]['start_value']
-                            
-                            if cache_data.iloc[-2]['close'] < check_price * 1.01:  # 1% tolerance
-                                state.reset()
+                            elif swing_type == 'bearish':
                                 if len(legs) >= 3:
                                     state.fib_levels = fibonacci_retracement(
                                         start_price=legs[2]['end_value'],
@@ -333,19 +375,24 @@ def main():
                                     f"fib1:{state.fib_levels['1.0']:.2f}", color='green')
                             elif cache_data.iloc[-2]['low'] < state.fib_levels['1.0']:
                                 state.reset()
+                                last_swing_type = None
                                 log(f"📈 Price dropped below fib1 - reset", color='red')
                             # شرایط touch آسان‌تر (Optimized): tolerance 1%
                             elif cache_data.iloc[-2]['low'] <= state.fib_levels['0.705'] * 1.01:
+                                current_candle_time = cache_data.iloc[-2]['timestamp']
+                                # بررسی اینکه آیا این کندل قبلاً پردازش شده است یا نه
                                 if not state.first_touch:
                                     state.first_touch_value = cache_data.iloc[-2]
                                     state.first_touch = True
                                     log(f"📈 First touch on fib0.705", color='yellow')
                                 elif state.first_touch and not state.second_touch:
-                                    # دومین touch: فقط بررسی کنیم که قیمت دوباره به سطح نزدیک شده
-                                    if abs(cache_data.iloc[-2]['low'] - state.fib_levels['0.705']) < abs(state.first_touch_value['low'] - state.fib_levels['0.705']) * 1.5:
-                                        state.second_touch_value = cache_data.iloc[-2]
-                                        state.second_touch = True
-                                        log(f"📈 Second touch detected - signal ready!", color='green')
+                                    # بررسی اینکه آیا این کندل جدید است (نه همان کندل First Touch)
+                                    if state.first_touch_value['timestamp'] != current_candle_time:
+                                        # دومین touch: فقط بررسی کنیم که قیمت دوباره به سطح نزدیک شده
+                                        if abs(cache_data.iloc[-2]['low'] - state.fib_levels['0.705']) < abs(state.first_touch_value['low'] - state.fib_levels['0.705']) * 1.5:
+                                            state.second_touch_value = cache_data.iloc[-2]
+                                            state.second_touch = True
+                                            log(f"📈 Second touch detected - signal ready!", color='green')
 
                         elif last_swing_type == 'bearish':
                             if cache_data.iloc[-2]['low'] < state.fib_levels['0.0']:
@@ -360,27 +407,41 @@ def main():
                                     f"fib1:{state.fib_levels['1.0']:.2f}", color='green')
                             elif cache_data.iloc[-2]['high'] > state.fib_levels['1.0']:
                                 state.reset()
+                                last_swing_type = None
                                 log(f"📉 Price rose above fib1 - reset", color='red')
                             # شرایط touch آسان‌تر (Optimized): tolerance 1%
                             elif cache_data.iloc[-2]['high'] >= state.fib_levels['0.705'] * 0.99:
+                                current_candle_time = cache_data.iloc[-2]['timestamp']
+                                # بررسی اینکه آیا این کندل قبلاً پردازش شده است یا نه
                                 if not state.first_touch:
                                     state.first_touch_value = cache_data.iloc[-2]
                                     state.first_touch = True
                                     log(f"📉 First touch on fib0.705", color='yellow')
                                 elif state.first_touch and not state.second_touch:
-                                    # دومین touch: فقط بررسی کنیم که قیمت دوباره به سطح نزدیک شده
-                                    if abs(cache_data.iloc[-2]['high'] - state.fib_levels['0.705']) < abs(state.first_touch_value['high'] - state.fib_levels['0.705']) * 1.5:
-                                        state.second_touch_value = cache_data.iloc[-2]
-                                        state.second_touch = True
-                                        log(f"📉 Second touch detected - signal ready!", color='green')
+                                    # بررسی اینکه آیا این کندل جدید است (نه همان کندل First Touch)
+                                    if state.first_touch_value['timestamp'] != current_candle_time:
+                                        # دومین touch: فقط بررسی کنیم که قیمت دوباره به سطح نزدیک شده
+                                        if abs(cache_data.iloc[-2]['high'] - state.fib_levels['0.705']) < abs(state.first_touch_value['high'] - state.fib_levels['0.705']) * 1.5:
+                                            state.second_touch_value = cache_data.iloc[-2]
+                                            state.second_touch = True
+                                            log(f"📉 Second touch detected - signal ready!", color='green')
                 else:
                     if len(legs) <= 2:
                         log(f'📊 No fibonacci levels active - waiting for swing formation', color='yellow')
                 
                 # Phase 3: بررسی سیگنال و باز کردن پوزیشن (Optimized)
-                # امکان ورود با first touch در اولین معامله
+                # امکان ورود با first touch در اولین معامله (اما نه در اولین اجرای ربات)
                 use_first_touch = TRADING_CONFIG.get('use_first_touch', True)
-                can_enter = state.second_touch or (use_first_touch and state.first_touch and trade_count == 0)
+                # در اولین اجرا، از باز کردن پوزیشن جلوگیری می‌کنیم (حتی اگر second_touch وجود داشته باشد)
+                # باید منتظر اولین کندل جدید بمانیم تا از داده‌های تاریخی استفاده نکنیم
+                if is_first_run:
+                    can_enter = False  # در اولین اجرا، هیچ پوزیشنی باز نمی‌کنیم
+                    if state.second_touch:
+                        log(f"⏸️ First run: Second touch detected in historical data, but waiting for new candle before entering", color='yellow')
+                    elif state.first_touch:
+                        log(f"⏸️ First run: First touch detected in historical data, waiting for second touch", color='yellow')
+                else:
+                    can_enter = state.second_touch or (use_first_touch and state.first_touch and trade_count == 0)
                 
                 if state.fib_levels and last_swing_type:
                     if last_swing_type == 'bullish' and can_enter:
@@ -411,6 +472,7 @@ def main():
                             except Exception as e:
                                 log(f'Skip signal email failed: {e}', color='red')
                             state.reset()
+                            last_swing_type = None
                             continue
                         
                         tick = mt5.symbol_info_tick(MT5_CONFIG['symbol'])
@@ -424,6 +486,7 @@ def main():
                         if candidate_sl >= entry_price:
                             log("❌ Invalid SL for BUY", color='red')
                             state.reset()
+                            last_swing_type = None
                             continue
                         
                         min_dist = 0.5
@@ -431,6 +494,7 @@ def main():
                             adj = entry_price - min_dist
                             if adj <= 0:
                                 state.reset()
+                                last_swing_type = None
                                 continue
                             candidate_sl = adj
                         
@@ -557,7 +621,10 @@ def main():
                         else:
                             log(f"❌ Failed to open BUY: {result.comment if result else 'No result'}", color='red')
                         
+                        # ریست کامل state و متغیرهای مرتبط بعد از باز شدن پوزیشن
                         state.reset()
+                        last_swing_type = None
+                        log(f"🧹 State reset after BUY position opened", color='magenta')
 
                     elif last_swing_type == 'bearish' and can_enter:
                         # با توجه به تایم‌فریم M15، اجازه باز کردن چند پوزیشن همزمان داده می‌شود
@@ -587,6 +654,7 @@ def main():
                             except Exception as e:
                                 log(f'Skip signal email failed: {e}', color='red')
                             state.reset()
+                            last_swing_type = None
                             continue
                         
                         tick = mt5.symbol_info_tick(MT5_CONFIG['symbol'])
@@ -600,6 +668,7 @@ def main():
                         if candidate_sl <= entry_price:
                             log("❌ Invalid SL for SELL", color='red')
                             state.reset()
+                            last_swing_type = None
                             continue
                         
                         min_dist = 0.5
@@ -730,7 +799,10 @@ def main():
                         else:
                             log(f"❌ Failed to open SELL: {result.comment if result else 'No result'}", color='red')
                         
+                        # ریست کامل state و متغیرهای مرتبط بعد از باز شدن پوزیشن
                         state.reset()
+                        last_swing_type = None
+                        log(f"🧹 State reset after SELL position opened", color='magenta')
                 
                 # لاگ خلاصه وضعیت
                 log(f'📊 Status: Legs={len(legs)}, FibActive={state.fib_levels is not None}, '
