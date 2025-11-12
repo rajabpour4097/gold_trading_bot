@@ -232,8 +232,9 @@ def main():
                     tick = mt5.symbol_info_tick(MT5_CONFIG['symbol'])
                     if tick:
                         for pos in open_positions:
+                            tp_display = f"{pos.tp:.2f}" if pos.tp > 0 else "Trailing Stop"
                             log(f"   Ticket: {pos.ticket}, Type: {'BUY' if pos.type == 0 else 'SELL'}, "
-                                f"Entry: {pos.price_open:.2f}, SL: {pos.sl:.2f}, TP: {pos.tp:.2f}, "
+                                f"Entry: {pos.price_open:.2f}, SL: {pos.sl:.2f}, TP: {tp_display}, "
                                 f"Profit: {pos.profit:.2f}", color='yellow')
                             # مدیریت Trailing Stop
                             manage_trailing_stop(pos, tick, mt5_conn)
@@ -460,6 +461,7 @@ def main():
                         
                         # ارسال ایمیل قبل از باز کردن پوزیشن
                         try:
+                            tp_str = f"${tp:.2f}" if tp is not None else "Trailing Stop"
                             send_trade_email_async(
                                 subject=f"NEW BUY ORDER {MT5_CONFIG['symbol']}",
                                 body=(
@@ -468,9 +470,9 @@ def main():
                                     f"Type: BUY (Bullish Swing)\n"
                                     f"Entry: ${entry_price:.2f}\n"
                                     f"SL: ${sl:.2f}\n"
-                                    f"TP: ${tp:.2f}\n"
+                                    f"TP: {tp_str}\n"
                                     f"Risk: ${risk:.2f} ({risk_percent}%)\n"
-                                    f"Risk/Reward: 1:{win_ratio}\n"
+                                    f"Exit Strategy: Trailing Stop (Start: {EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {}).get('start_r', 1.5)}R, Gap: {EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {}).get('gap_r', 0.5)}R)\n"
                                 )
                             )
                         except Exception as e:
@@ -533,6 +535,7 @@ def main():
                             
                             # ارسال ایمیل نتیجه معامله
                             try:
+                                tp_str = f"${tp:.2f}" if tp is not None else "Trailing Stop"
                                 send_trade_email_async(
                                     subject=f"BUY ORDER EXECUTED {MT5_CONFIG['symbol']}",
                                     body=(
@@ -545,7 +548,8 @@ def main():
                                         f"Volume: {result.volume}\n"
                                         f"Entry: ${entry_price:.2f}\n"
                                         f"SL: ${sl:.2f}\n"
-                                        f"TP: ${tp:.2f}\n"
+                                        f"TP: {tp_str}\n"
+                                        f"Exit Strategy: Trailing Stop\n"
                                     )
                                 )
                             except Exception as e:
@@ -630,6 +634,7 @@ def main():
                         
                         # ارسال ایمیل قبل از باز کردن پوزیشن
                         try:
+                            tp_str = f"${tp:.2f}" if tp is not None else "Trailing Stop"
                             send_trade_email_async(
                                 subject=f"NEW SELL ORDER {MT5_CONFIG['symbol']}",
                                 body=(
@@ -638,9 +643,9 @@ def main():
                                     f"Type: SELL (Bearish Swing)\n"
                                     f"Entry: ${entry_price:.2f}\n"
                                     f"SL: ${sl:.2f}\n"
-                                    f"TP: ${tp:.2f}\n"
+                                    f"TP: {tp_str}\n"
                                     f"Risk: ${risk:.2f} ({risk_percent}%)\n"
-                                    f"Risk/Reward: 1:{win_ratio}\n"
+                                    f"Exit Strategy: Trailing Stop (Start: {EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {}).get('start_r', 1.5)}R, Gap: {EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {}).get('gap_r', 0.5)}R)\n"
                                 )
                             )
                         except Exception as e:
@@ -703,6 +708,7 @@ def main():
                             
                             # ارسال ایمیل نتیجه معامله
                             try:
+                                tp_str = f"${tp:.2f}" if tp is not None else "Trailing Stop"
                                 send_trade_email_async(
                                     subject=f"SELL ORDER EXECUTED {MT5_CONFIG['symbol']}",
                                     body=(
@@ -715,7 +721,8 @@ def main():
                                         f"Volume: {result.volume}\n"
                                         f"Entry: ${entry_price:.2f}\n"
                                         f"SL: ${sl:.2f}\n"
-                                        f"TP: ${tp:.2f}\n"
+                                        f"TP: {tp_str}\n"
+                                        f"Exit Strategy: Trailing Stop\n"
                                     )
                                 )
                             except Exception as e:
