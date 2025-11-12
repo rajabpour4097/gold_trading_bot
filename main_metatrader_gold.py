@@ -142,6 +142,7 @@ def main():
     trades_today = 0  # شمارنده معاملات امروز
     last_trade_date = None  # تاریخ آخرین معامله
     is_first_run = True  # Flag برای تشخیص اولین اجرا
+    traded_swings = set()  # مجموعه swing هایی که برای آن‌ها معامله شده (با استفاده از fib 1.0)
 
     log("🚀 Gold Trading Bot Started...", color='green')
     trailing_config = EXIT_MANAGEMENT_CONFIG.get('trailing_stop', {})
@@ -445,6 +446,14 @@ def main():
                 
                 if state.fib_levels and last_swing_type:
                     if last_swing_type == 'bullish' and can_enter:
+                        # بررسی اینکه آیا برای این swing قبلاً معامله شده یا نه
+                        swing_key = (last_swing_type, round(state.fib_levels['1.0'], 2))
+                        if swing_key in traded_swings:
+                            log(f"🚫 Skip BUY signal: Already traded this swing (fib 1.0: {state.fib_levels['1.0']:.2f})", color='yellow')
+                            state.reset()
+                            last_swing_type = None
+                            continue
+                        
                         # با توجه به تایم‌فریم M15، اجازه باز کردن چند پوزیشن همزمان داده می‌شود
                         # اگر می‌خواهید فقط یک پوزیشن باز باشد، prevent_multiple_positions را True کنید
                         if TRADING_CONFIG.get('prevent_multiple_positions', False) and has_open_positions():
@@ -573,6 +582,9 @@ def main():
                         
                         if result and result.retcode == 10009:  # TRADE_RETCODE_DONE
                             log(f"✅ BUY Position opened: Ticket={result.order}", color='green')
+                            # ثبت این swing به عنوان معامله شده
+                            swing_key = (last_swing_type, round(state.fib_levels['1.0'], 2))
+                            traded_swings.add(swing_key)
                             trade_count += 1
                             trades_today += 1
                             
@@ -627,6 +639,14 @@ def main():
                         log(f"🧹 State reset after BUY position opened", color='magenta')
 
                     elif last_swing_type == 'bearish' and can_enter:
+                        # بررسی اینکه آیا برای این swing قبلاً معامله شده یا نه
+                        swing_key = (last_swing_type, round(state.fib_levels['1.0'], 2))
+                        if swing_key in traded_swings:
+                            log(f"🚫 Skip SELL signal: Already traded this swing (fib 1.0: {state.fib_levels['1.0']:.2f})", color='yellow')
+                            state.reset()
+                            last_swing_type = None
+                            continue
+                        
                         # با توجه به تایم‌فریم M15، اجازه باز کردن چند پوزیشن همزمان داده می‌شود
                         # اگر می‌خواهید فقط یک پوزیشن باز باشد، prevent_multiple_positions را True کنید
                         if TRADING_CONFIG.get('prevent_multiple_positions', False) and has_open_positions():
@@ -751,6 +771,9 @@ def main():
                         
                         if result and result.retcode == 10009:  # TRADE_RETCODE_DONE
                             log(f"✅ SELL Position opened: Ticket={result.order}", color='green')
+                            # ثبت این swing به عنوان معامله شده
+                            swing_key = (last_swing_type, round(state.fib_levels['1.0'], 2))
+                            traded_swings.add(swing_key)
                             trade_count += 1
                             trades_today += 1
                             
